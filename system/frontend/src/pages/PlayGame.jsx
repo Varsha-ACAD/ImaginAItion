@@ -29,9 +29,19 @@ export default function PlayGame() {
   const [round, setRound] = useState(0);
   const [hasGenerated, setHasGenerated] = useState(false);  // track whether the user has generated an image
   const [isGenerating, setIsGenerating] = useState(false);  // track whether an image is being generated
-  const [showExitConfirm, setShowExitConfirm] = useState(false);  // emergency-exit confirmation dialog
   const [reconnecting, setReconnecting] = useState(false);  // track the reconnection state
   const [gameStarted, setGameStarted] = useState(false);  // track whether the game has actually started
+  const [codeCopied, setCodeCopied] = useState(false);
+
+  const handleCopyGameCode = async () => {
+    try {
+      await navigator.clipboard.writeText(gameCode);
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy game code:', error);
+    }
+  };
 
   // Handle reconnection on every socket connect (including transport upgrades)
   useEffect(() => {
@@ -129,27 +139,6 @@ export default function PlayGame() {
     });
   }, [gameCode]);
 
-  // handle emergency exit
-  const handleEmergencyExit = async () => {
-    try {
-      // call the backend API to force-end the game
-      await axios.post(`/api/force-game-end`, {
-        room_id: gameCode,
-        sid: sio.id
-      });
-      
-      // set the game-over state directly
-      setGameOver(true);
-      setShowExitConfirm(false);
-    } catch (error) {
-      console.error('Error forcing game end:', error);
-      // navigate to the results page even if the API call fails
-      setGameOver(true);
-      setShowExitConfirm(false);
-    }
-  };
-
-
   // check if all players are done
   useEffect(() => {
     const handleAllPlayersDone = (data) => {
@@ -233,52 +222,22 @@ export default function PlayGame() {
         </div>
       )}
 
-      {/* emergency-exit button - subtle but accessible in all phases, including while waiting for players */}
-      {!gameOver && (
-        <button
-          onClick={() => setShowExitConfirm(true)}
-          className="fixed top-4 right-4 z-[60] w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full text-sm opacity-30 hover:opacity-100 transition-opacity duration-200 flex items-center justify-center"
-          title="Emergency Exit"
-        >
-          ⚠️
-        </button>
-      )}
-
-      {/* emergency-exit confirmation dialog */}
-      {showExitConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70]">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md mx-4 border-2 border-red-500">
-            <div className="text-center">
-              <div className="text-4xl mb-4">⚠️</div>
-              <h3 className="text-lg font-bold mb-2 text-red-600">Emergency Exit</h3>
-              <p className="text-gray-700 mb-6">
-                This will immediately end the game for all players and jump to the final scoreboard. 
-                This action cannot be undone.
-              </p>
-              <div className="flex gap-3 justify-center">
-                <button
-                  onClick={() => setShowExitConfirm(false)}
-                  className="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleEmergencyExit}
-                  className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded transition-colors"
-                >
-                  End Game Now
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {showModal && (
         <div className="font-semibold font-inter fixed inset-0 flex items-center justify-center ">
-          <div className="bg-white p-6 rounded shadow-md justify-items-center text-xl border-black border-[2px]">
+          <div className="bg-white p-8 rounded shadow-md justify-items-center text-xl border-black border-[2px] text-center max-w-md">
             <StageSpinner loading={true} color="#111111" />
-            <p>Waiting for other players to join...</p>
+            <p className="mt-4 mb-6">Waiting for other players to join...</p>
+            <p className="text-base text-gray-600 font-normal mb-2">Share this game code:</p>
+            <p className="text-4xl font-bold tracking-widest mb-4">{gameCode}</p>
+            <button
+              onClick={handleCopyGameCode}
+              className="mb-4 px-4 py-2 bg-[#111111] text-white rounded-lg text-base font-normal hover:bg-gray-800 transition-colors"
+            >
+              {codeCopied ? 'Copied!' : 'Copy code'}
+            </button>
+            <p className="text-sm text-gray-600 font-normal">
+              Others can join from the home page and enter this code
+            </p>
           </div>
         </div>
       )}
