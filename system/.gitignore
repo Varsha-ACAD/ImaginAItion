@@ -28,11 +28,6 @@ backend/.env
 backend/.env.local
 backend/.DS_Store
 
-# Ignore Docker-related files
-docker-compose.override.yml
-*.dockerfile
-*.tar
-
 # Ignore IDE and editor settings
 .vscode/
 .idea/

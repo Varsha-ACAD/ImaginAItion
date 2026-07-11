@@ -14,35 +14,33 @@ can be logged for later analysis.
 - **Image generation:** OpenAI API — **each room provides its own API key at runtime**
   (no key is bundled with the project)
 
-## Quick Start (Docker)
+## Quick Start (Local Dev)
 
 ```bash
-docker compose up --build
+cp .env.example .env   # then set BACKEND_HOST to your machine's LAN IP
 ```
-
-The app is served on a single port via an Nginx reverse proxy. For a
-production-style build:
-
-```bash
-cp .env.example .env   # then edit values for your deployment
-docker compose -f docker-compose.prod.yml up -d
-```
-
-## Local Development
 
 | Task | Command |
 | --- | --- |
-| Frontend | `cd frontend && npm install && npm run dev` |
-| Backend  | `cd backend && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt && uvicorn main:app --host 0.0.0.0 --port 5001 --reload` |
+| Frontend | `cd frontend && npm install && npm run dev -- --host` |
+| Backend  | `cd backend && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt && python main.py` |
 
-You may need to do `conda deactivate` and rerun `uvicorn main:app --host 0.0.0.0 --port 5001 --reload` if you run into ModuleNotFoundError in backend. 
+You may need to do `conda deactivate` before the backend command if you run
+into `ModuleNotFoundError`.
+
+Both commands read the single `.env` at the repo root (`system/.env`) for
+`BACKEND_HOST`/`BACKEND_PORT`, so the backend's port only needs to be set in
+one place — there's no separate `--port` flag to remember, and the frontend
+automatically proxies to wherever the backend actually starts. Players on the
+same WiFi (e.g. testing on a phone) can then reach the frontend at
+`http://<BACKEND_HOST>:5173`.
 
 ## Configuration
 
 Environment variables (see `.env.example`):
 
-- `BACKEND_URL` — public base URL of the deployment
-- `VITE_API_URL` — frontend API base (leave empty to use Nginx relative paths)
+- `BACKEND_HOST` / `BACKEND_PORT` — where the backend binds to; also used to
+  build `VITE_API_URL` so the frontend always points at the same place
 - `ADMIN_USERNAME` / `ADMIN_PASSWORD` — credentials for the admin log-export
   dashboard. Set these to strong values before any public deployment.
 

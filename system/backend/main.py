@@ -27,11 +27,18 @@ import time
 from logger import game_logger, generate_human_readable_filename, handle_filename_collision
 import secrets
 import hashlib
+from pathlib import Path
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
 app = FastAPI()
+
+# Browsers reject "Access-Control-Allow-Origin: *" combined with
+# "Access-Control-Allow-Credentials: true" for credentialed requests, so the
+# allowed origin must be set explicitly once the frontend's domain is known.
+# Falls back to "*" (no credentials) for local dev when unset.
+FRONTEND_URL = os.getenv("FRONTEND_URL", "*")
 
 # Custom CORS middleware that won't interfere with Socket.IO
 class CustomCORSMiddleware(BaseHTTPMiddleware):
@@ -45,7 +52,7 @@ class CustomCORSMiddleware(BaseHTTPMiddleware):
             return Response(
                 status_code=200,
                 headers={
-                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Origin": FRONTEND_URL,
                     "Access-Control-Allow-Methods": "*",
                     "Access-Control-Allow-Headers": "*",
                     "Access-Control-Allow-Credentials": "true",
@@ -56,7 +63,7 @@ class CustomCORSMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
 
         # Add CORS headers to response
-        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Origin"] = FRONTEND_URL
         response.headers["Access-Control-Allow-Credentials"] = "true"
 
         return response
@@ -80,10 +87,17 @@ os.makedirs("generated_images", exist_ok=True)
 app.mount("/generated_images", StaticFiles(directory="generated_images"), name="generated_images")
 
 # OpenAI - client will be created per room with user-provided API key
-load_dotenv()
+# load the shared ../.env explicitly (not just whatever's in the cwd) so this
+# works the same way regardless of where the process is launched from - it's
+# the same file the frontend dev server (vite.config.js) reads BACKEND_PORT from
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+
+# single source of truth for what port this process binds to, whether started
+# via `python main.py` or `uvicorn main:app --port $BACKEND_PORT`
+BACKEND_PORT = int(os.getenv("BACKEND_PORT", 5004))
 
 # Get backend URL from environment variable, fallback to localhost for development
-BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:5001")
+BACKEND_URL = os.getenv("BACKEND_URL", f"http://localhost:{BACKEND_PORT}")
 
 
 def resolve_room_api_key(room):
@@ -1149,7 +1163,7 @@ async def wait_for_all_generations(room, round_num):
                         if last_generation.get("images"):
                             image_name = last_generation["images"][0]
                             turns_data[player_sid]["submitted_image"] = {
-                                "url": f"{BACKEND_URL}/generated_images/{image_name}",
+                                "url": f"/generated_images/{image_name}",
                                 "name": image_name,
                                 "random": last_generation.get("random", False),
                                 "auto_submitted": True
@@ -1432,6 +1446,37 @@ async def end_game(sid, data=None):
 
     room.game_state["ended_at"] = get_timestamp()
     await sio.emit("game_over", {"message": "The host ended the game early."}, room=room.room_id)
+
+
+@sio.on("force-advance")
+async def force_advance(sid, data=None):
+    """Let the host push the game past the current turn/vote without waiting for every
+    player - used when someone got stuck or closed their tab and the room would otherwise
+    wait forever. Reuses the same turn-advance logic as a normal timer expiry, which already
+    resyncs every player's current_turn, so stragglers are simply carried forward."""
+    room_id = data["room_id"] if data and isinstance(data, dict) and "room_id" in data else sid_to_room.get(sid)
+
+    if not room_id:
+        await sio.emit("error", {"message": "Player not in any room"}, room=sid)
+        return
+
+    room = room_manager.get_room(room_id)
+    if not room:
+        await sio.emit("error", {"message": "Room not found"}, room=sid)
+        return
+
+    if room.host_sid != sid:
+        await sio.emit("error", {"message": "Only the host can force the game to advance"}, room=sid)
+        return
+
+    print(f"⏭️ Host {sid[:8]}... force-advanced room {room_id} past a stuck player")
+
+    if room.room_id in turn_timers:
+        turn_timers[room.room_id].cancel()
+        del turn_timers[room.room_id]
+
+    update_game_turn(room)
+    await move_to_next_turn(room)
 
 
 @sio.on("player-done")
@@ -2006,12 +2051,19 @@ def process_image_url(image_identifier):
     if not image_identifier:
         return None
     
-    if image_identifier.startswith('http'):
-        # Already a full URL
+    if image_identifier.startswith('http') or image_identifier.startswith('/generated_images/') or image_identifier.startswith('/static/'):
+        # Already a full URL or an already-processed relative path - this function's
+        # own output gets fed back in as input (submitted_image.url is whatever the
+        # frontend last passed to /api/submit-image, which is itself the output of an
+        # earlier process_image_url call), so it must be idempotent or repeated calls
+        # double-prefix it into a broken path like /generated_images//generated_images/x.png
         return image_identifier
     elif image_identifier.endswith('.png') and ('img-' in image_identifier or image_identifier.startswith('img-')):
         # Local filename (both old format img-xxx.png and new format timestamp-img-xxx.png)
-        return f"{BACKEND_URL}/generated_images/{image_identifier}"
+        # relative path, like reference images - the frontend resolves it against whatever
+        # host it's actually talking to (LAN IP in dev, same origin in prod), rather than us
+        # baking in BACKEND_URL, which breaks for any device that isn't the backend host itself
+        return f"/generated_images/{image_identifier}"
     else:
         # Unknown format - keep as is (might be placeholder URLs)
         return image_identifier
@@ -4079,4 +4131,4 @@ app.include_router(router)
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=5001, reload=True, log_level="debug")
+    uvicorn.run(app, host="0.0.0.0", port=BACKEND_PORT, reload=True, log_level="debug")

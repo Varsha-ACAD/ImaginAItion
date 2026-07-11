@@ -13,7 +13,7 @@ const getApiBaseUrl = () => {
 
   // Development mode - use localhost
   if (import.meta.env.DEV) {
-    return 'http://localhost:5001';
+    return 'http://localhost:5004';
   }
 
   // Fallback to empty string for relative paths
@@ -39,11 +39,7 @@ export const getImageUrl = (imagePath) => {
   if (imagePath.startsWith('http')) return imagePath;
 
   // Use API_BASE_URL for image paths
-  const baseUrl = import.meta.env.VITE_ENVIRONMENT === 'production'
-    ? '' // Use relative paths in production
-    : 'http://localhost:5001'; // Use localhost in development
-
-  return `${baseUrl}${imagePath}`;
+  return `${API_BASE_URL}${imagePath}`;
 };
 
 console.log('API Base URL:', API_BASE_URL);

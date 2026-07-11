@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import sio from './websocket';
 import { MetroSpinner } from 'react-spinners-kit';
 import Waiting from './Waiting';
@@ -8,6 +8,8 @@ import { getImageUrl } from '../config/api';
 
 export default function Voting() {
   const { gameCode } = useParams();
+  const location = useLocation();
+  const isHost = new URLSearchParams(location.search).get('host') === 'true';
   const [timeLeft, setTimeLeft] = useState(-1);
   const [showVoteReminder, setShowVoteReminder] = useState(false);
   
@@ -112,6 +114,12 @@ export default function Voting() {
       
     } catch (error) {
       console.error('Error voting:', error);
+    }
+  };
+
+  const handleForceAdvance = () => {
+    if (window.confirm("Skip whoever hasn't voted and move everyone on to the next step? This can't be undone.")) {
+      sio.emit('force-advance', { room_id: gameCode });
     }
   };
 
@@ -257,6 +265,14 @@ export default function Voting() {
                   <div className="text-green-600 font-medium">
                     ✅ Vote submitted! Waiting for other players...
                   </div>
+                  {isHost && (
+                    <button
+                      onClick={handleForceAdvance}
+                      className="mt-3 px-4 py-2 bg-[#111111] text-white rounded-lg text-sm font-normal hover:bg-gray-800 transition-colors"
+                    >
+                      Skip &amp; continue without them
+                    </button>
+                  )}
                 </div>
               )}
             </div>

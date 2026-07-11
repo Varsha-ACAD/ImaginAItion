@@ -2,14 +2,22 @@ import { StageSpinner } from 'react-spinners-kit';
 import { useEffect, useState } from 'react';
 import socket from './websocket';
 import axios from 'axios';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 
 export default function Waiting({ message = "Waiting for other players...", showGenerationProgress = false }) {
   const [playerState, setPlayerState] = useState({});
   const [sidToPlayer, setSidToPlayer] = useState({});
   const { gameCode } = useParams();
+  const location = useLocation();
+  const isHost = new URLSearchParams(location.search).get('host') === 'true';
   const [currentTurn, setCurrentTurn] = useState(0);
   const [generationProgress, setGenerationProgress] = useState("");
+
+  const handleForceAdvance = () => {
+    if (window.confirm("Skip whoever hasn't finished and move everyone on to the next step? This can't be undone.")) {
+      socket.emit('force-advance', { room_id: gameCode });
+    }
+  };
 
   useEffect(() => {
     const fetchSidToPlayers = async () => {
@@ -93,6 +101,14 @@ export default function Waiting({ message = "Waiting for other players...", show
             </div>
           ))}
         </div>
+        {isHost && Object.values(playerState).some((player) => player.current_turn <= currentTurn) && (
+          <button
+            onClick={handleForceAdvance}
+            className="mt-2 px-4 py-2 bg-[#111111] text-white rounded-lg text-base font-normal hover:bg-gray-800 transition-colors"
+          >
+            Skip &amp; continue without them
+          </button>
+        )}
       </div>
     </div>
   );

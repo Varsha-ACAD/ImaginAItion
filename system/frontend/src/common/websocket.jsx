@@ -15,7 +15,7 @@ const getSocketUrl = () => {
   }
 
   // In development, use localhost
-  return 'http://localhost:5001';
+  return 'http://localhost:5004';
 };
 
 const socketUrl = getSocketUrl();
@@ -32,5 +32,14 @@ socket.on('response', (data) => console.log('Received:', data));
 socket.on('connect_error', (error) =>
   console.error('Connection Error:', error)
 );
+// the backend emits a generic 'error' event for rejected actions (e.g. a non-host
+// trying to end/force-advance the game); without a handler these fail completely
+// silently on the client, so surface them instead of leaving the user guessing
+socket.on('error', (data) => {
+  console.error('Socket error:', data);
+  if (data && data.message) {
+    alert(data.message);
+  }
+});
 
 export default socket;

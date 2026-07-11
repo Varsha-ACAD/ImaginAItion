@@ -512,7 +512,7 @@ export default function Generate({ currentTurn, gameStarted: gameStartedProp, on
                     <div className="flex-1 flex flex-col items-center justify-center p-4">
                       <div className="w-full max-w-[20rem] sm:max-w-[24rem] lg:max-w-[30rem] aspect-square rounded-[1.3rem] relative overflow-hidden shadow-lg">
                         <img
-                          src={generatedImages[0]}
+                          src={getImageUrl(generatedImages[0])}
                           className="w-full h-full rounded-[1.3rem] object-cover"
                           alt="Generated image"
                         />

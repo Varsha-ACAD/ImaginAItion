@@ -92,6 +92,11 @@ export default function PlayGame() {
                 if (gameState.started_at) {
                   console.log(`🎮 Game has started at: ${gameState.started_at}`);
                   setGameStarted(true);
+                  // the 'game-started' socket event only fires once, when the host
+                  // originally starts the game - a reconnect (e.g. mobile tab getting
+                  // reloaded after being backgrounded) never sees it, so the lobby
+                  // modal's default-true state must be cleared explicitly here too
+                  setShowModal(false);
                 } else {
                   console.log(`⏳ Game not yet started, still waiting for players`);
                   setGameStarted(false);
@@ -275,7 +280,7 @@ export default function PlayGame() {
           <div className="flex flex-col lg:grid lg:grid-cols-4">
             <div className="flex flex-wrap items-center justify-between gap-2 lg:contents">
               <TopBar />
-              <div className="flex items-center gap-2 sm:gap-3 mt-4 mr-4 lg:mt-8 lg:mr-8 lg:col-start-4 lg:justify-self-end">
+              <div className="relative z-[60] flex items-center gap-2 sm:gap-3 mt-4 mr-4 lg:mt-8 lg:mr-8 lg:col-start-4 lg:justify-self-end">
                 {isHost && !gameOver && currentTurn !== 24 && (
                   <button
                     onClick={handleEndGame}

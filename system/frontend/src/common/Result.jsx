@@ -358,7 +358,7 @@ export default function Result() {
       {finalResults.length > 0 && (
         <div className="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 p-4 border-t-2 border-gray-200">
           <div className="flex-1 flex items-center gap-2 text-gray-800 bg-gray-100 px-4 py-2 rounded-lg">
-            <span className="text-sm sm:text-base">Discuss time! Share your thoughts with other players and feel free to try two more prompts!</span>
+            <span className="text-sm sm:text-base">Time to discuss!</span>
           </div>
           <button
             className="w-full sm:w-auto bg-black text-white px-6 py-2 rounded-xl font-semibold hover:bg-gray-800 transition-colors"
