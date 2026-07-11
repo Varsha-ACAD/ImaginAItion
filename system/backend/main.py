@@ -289,6 +289,11 @@ for category, images in REFERENCE_IMAGE_POOL_BY_CATEGORY.items():
 # API Router for API routes
 router = APIRouter()
 
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
 # Admin authentication.
 # Credentials are read from environment variables. Set ADMIN_USERNAME and
 # ADMIN_PASSWORD before deploying; the development fallbacks below MUST NOT be
@@ -1144,7 +1149,7 @@ async def wait_for_all_generations(room, round_num):
                         if last_generation.get("images"):
                             image_name = last_generation["images"][0]
                             turns_data[player_sid]["submitted_image"] = {
-                                "url": f"http://localhost:5001/generated_images/{image_name}",
+                                "url": f"{BACKEND_URL}/generated_images/{image_name}",
                                 "name": image_name,
                                 "random": last_generation.get("random", False),
                                 "auto_submitted": True

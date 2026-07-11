@@ -20,5 +20,7 @@ RUN mkdir -p generated_images static
 
 EXPOSE 5001
 
-# Use production settings
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5001", "--workers", "1"]
+# Use production settings. Railway (and similar PaaS) inject $PORT at runtime,
+# so bind to that instead of a fixed port; shell form is required for the
+# variable to expand. Falls back to 5001 for local `docker run`.
+CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-5001} --workers 1

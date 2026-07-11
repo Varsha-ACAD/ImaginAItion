@@ -19,9 +19,12 @@ FROM nginx:alpine
 # Copy built assets from build stage
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Copy custom nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy nginx config as a template so the nginx entrypoint's built-in
+# envsubst step can inject $PORT (Railway/PaaS platforms assign this at
+# runtime and won't necessarily use 80). Falls back to 8080 locally.
+COPY nginx.conf /etc/nginx/templates/default.conf.template
+ENV PORT=8080
 
-EXPOSE 80
+EXPOSE 8080
 
 CMD ["nginx", "-g", "daemon off;"]
