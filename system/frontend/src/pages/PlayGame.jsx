@@ -10,7 +10,6 @@ import Voting from '../common/Voting';
 import RevealPrompt from '../common/RevealPrompt';
 import Result from '../common/Result';
 import ReferenceImage from '../common/ReferenceImage';
-import QuickDraws from '../common/QuickDraws';
 import sio from '../common/websocket';
 import { useEffect } from 'react';
 import { StageSpinner } from 'react-spinners-kit';
@@ -26,12 +25,24 @@ export default function PlayGame() {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const playerName = searchParams.get('player');
+  const isHost = searchParams.get('host') === 'true';
   const [round, setRound] = useState(0);
   const [hasGenerated, setHasGenerated] = useState(false);  // track whether the user has generated an image
   const [isGenerating, setIsGenerating] = useState(false);  // track whether an image is being generated
   const [reconnecting, setReconnecting] = useState(false);  // track the reconnection state
   const [gameStarted, setGameStarted] = useState(false);  // track whether the game has actually started
   const [codeCopied, setCodeCopied] = useState(false);
+  const [numPlayers, setNumPlayers] = useState(0);  // live count of players who have joined the room
+
+  const handleEndGame = () => {
+    if (window.confirm('End the game for everyone now? This cannot be undone.')) {
+      sio.emit('end-game', { room_id: gameCode });
+    }
+  };
+
+  const handleStartGame = () => {
+    sio.emit('start-game', { room_id: gameCode });
+  };
 
   const handleCopyGameCode = async () => {
     try {
@@ -176,11 +187,9 @@ export default function PlayGame() {
 
   useEffect(() => {
     const handleNumPlayers = (data) => {
-      if (data.num_players > 2) {
-        setShowModal(false);
-      }
+      setNumPlayers(data.num_players);
     };
-    
+
     // listen for the game-start event to ensure the modal is hidden
     const handleGameStarted = (data) => {
       console.log('Game started in PlayGame!', data);
@@ -223,21 +232,39 @@ export default function PlayGame() {
       )}
 
       {showModal && (
-        <div className="font-semibold font-inter fixed inset-0 flex items-center justify-center ">
-          <div className="bg-white p-8 rounded shadow-md justify-items-center text-xl border-black border-[2px] text-center max-w-md">
+        <div className="font-semibold font-inter fixed inset-0 flex items-center justify-center px-4">
+          <div className="bg-white p-6 sm:p-8 rounded shadow-md justify-items-center text-lg sm:text-xl border-black border-[2px] text-center max-w-md w-full">
             <StageSpinner loading={true} color="#111111" />
-            <p className="mt-4 mb-6">Waiting for other players to join...</p>
+            <p className="mt-4 mb-2">
+              {isHost ? 'Waiting for players to join...' : 'Waiting for the host to start the game...'}
+            </p>
+            <p className="text-base text-gray-600 font-normal mb-4">
+              {numPlayers} player{numPlayers !== 1 ? 's' : ''} joined
+            </p>
             <p className="text-base text-gray-600 font-normal mb-2">Share this game code:</p>
-            <p className="text-4xl font-bold tracking-widest mb-4">{gameCode}</p>
+            <p className="text-3xl sm:text-4xl font-bold tracking-widest mb-4 break-all">{gameCode}</p>
             <button
               onClick={handleCopyGameCode}
               className="mb-4 px-4 py-2 bg-[#111111] text-white rounded-lg text-base font-normal hover:bg-gray-800 transition-colors"
             >
               {codeCopied ? 'Copied!' : 'Copy code'}
             </button>
-            <p className="text-sm text-gray-600 font-normal">
+            <p className="text-sm text-gray-600 font-normal mb-4">
               Others can join from the home page and enter this code
             </p>
+            {isHost && (
+              <button
+                onClick={handleStartGame}
+                disabled={numPlayers < 2}
+                className={`px-6 py-2 rounded-lg text-base font-semibold transition-colors ${
+                  numPlayers < 2
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-green-600 text-white hover:bg-green-700'
+                }`}
+              >
+                {numPlayers < 2 ? 'Need at least 2 players' : 'Start Game'}
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -245,20 +272,25 @@ export default function PlayGame() {
         <GameResult />
       ) : (
         <>
-          <div className="grid grid-cols-4">
-            <TopBar />
-            <div className="col-start-4">
-              {currentTurn % 4 !== 2 && currentTurn % 4 !== 1 && !(currentTurn % 4 === 0 && !hasGenerated && !isGenerating) && <Timer />}
+          <div className="flex flex-col lg:grid lg:grid-cols-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 lg:contents">
+              <TopBar />
+              <div className="flex items-center gap-2 sm:gap-3 mt-4 mr-4 lg:mt-8 lg:mr-8 lg:col-start-4 lg:justify-self-end">
+                {isHost && !gameOver && currentTurn !== 24 && (
+                  <button
+                    onClick={handleEndGame}
+                    className="px-2.5 py-1.5 sm:px-4 sm:py-2 bg-red-600 text-white text-xs sm:text-base lg:text-[1.25rem] font-semibold rounded-[0.5rem] shadow hover:bg-red-700 transition-colors whitespace-nowrap"
+                  >
+                    End Game
+                  </button>
+                )}
+                {currentTurn % 4 !== 2 && currentTurn % 4 !== 1 && !(currentTurn % 4 === 0 && !hasGenerated && !isGenerating) && <Timer />}
+              </div>
             </div>
-            <div className="mt-7 ml-8 grid grid-cols-1 content-between h-full">
+            <div className="mt-4 mx-4 lg:mt-7 lg:ml-8 lg:mr-0 grid grid-cols-1 content-between lg:h-full">
               <PlayerContainer />
-              {currentTurn % 4 === 3 && (
-                <div className="mt-2 h-full flex flex-col">
-                  <QuickDraws />
-                </div>
-              )}
             </div>
-            <div className="col-start-2 col-span-full m-7 h-full">
+            <div className="mt-4 mx-4 mb-4 lg:mt-0 lg:mx-0 lg:mb-0 lg:col-start-2 lg:col-span-full lg:m-7 lg:h-full">
               {currentTurn % 4 === 3 ? (
                 // Result component gets full height and relative positioning
                 <div className="h-full relative">

@@ -35,8 +35,13 @@ export default function Waiting({ message = "Waiting for other players...", show
         return;
       }
       setPlayerState(data.player_state);
-      setCurrentTurn(data.player_state[socket.id].current_turn);
-      console.log(data.player_state[socket.id].current_turn);
+      // Use the lowest current_turn across all players as the "not finished yet" baseline,
+      // rather than the viewer's own turn - a player who finishes gets bumped +1 ahead of
+      // stragglers, so comparing against your own value always marks yourself "Complete"
+      // even mid-generation, and inverts the status of anyone who finished before you.
+      const turns = Object.values(data.player_state).map((player) => player.current_turn);
+      setCurrentTurn(Math.min(...turns));
+      console.log('Baseline (unfinished) turn:', Math.min(...turns));
       console.log(data.player_state);
     };
 
@@ -72,7 +77,7 @@ export default function Waiting({ message = "Waiting for other players...", show
             <div key={sid} className="w-full">
               <div className="flex justify-between items-center pb-2 font-inter font-normal">
                 <div className="text-[1.25rem]">{sidToPlayer[sid]}</div>
-                {playerState[sid].current_turn === currentTurn ? (
+                {playerState[sid].current_turn > currentTurn ? (
                   <div className="gap-x-[0.625rem] py-[0.5rem] px-[0.75rem] rounded-[4.625rem] bg-[#009416] text-white flex items-center">
                     <i className="fa-solid fa-check"></i>
                     <div>Complete</div>

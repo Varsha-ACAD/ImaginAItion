@@ -157,9 +157,9 @@ export default function Voting() {
       </div>
       
       {/* layout: reference image on the left + voting area on the right */}
-      <div className="flex h-[45rem] w-full px-8 gap-6">
+      <div className="flex flex-col lg:flex-row h-auto lg:h-[45rem] w-full px-2 sm:px-4 lg:px-8 gap-4 lg:gap-6">
         {/* left-side reference-image area - consistent with the Generate component */}
-        <div className="w-1/4 flex flex-col">
+        <div className="w-full lg:w-1/4 flex flex-col">
           <h3 className="text-lg font-inter font-medium mb-3 text-center">Reference Image</h3>
           <div className="flex-1 border border-gray-300 rounded-2xl p-4 bg-gray-50 flex flex-col items-center justify-center">
             {isLoadingReference ? (
@@ -172,7 +172,7 @@ export default function Voting() {
                 <img
                   src={getImageUrl(referenceImage.image_path)}
                   alt={referenceImage.description}
-                  className="max-w-full max-h-[20rem] rounded-xl object-contain mb-3"
+                  className="max-w-full max-h-[14rem] lg:max-h-[20rem] rounded-xl object-contain mb-3"
                   onError={(e) => {
                     console.error('Failed to load image:', e.target.src);
                     e.target.style.display = 'none';
@@ -190,7 +190,7 @@ export default function Voting() {
         </div>
         
         {/* right-side voting area */}
-        <div className="w-3/4 flex flex-col">
+        <div className="w-full lg:w-3/4 flex flex-col">
           {isLoadingImages ? (
             <div className="flex-1 flex flex-col items-center justify-center">
               <MetroSpinner loading={true} color="#111111" size={50} />
@@ -213,11 +213,11 @@ export default function Voting() {
                 </div>
               </div>
               
-              <div className="flex gap-8 justify-center">
+              <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 justify-center items-center">
                 {otherPlayersImages.map((imageData, index) => (
-                  <div 
+                  <div
                     key={index}
-                    className={`w-80 h-96 border-2 rounded-3xl p-4 transition-all cursor-pointer flex flex-col shadow-lg ${
+                    className={`w-full max-w-[18rem] sm:w-72 sm:h-80 lg:w-80 lg:h-96 border-2 rounded-3xl p-4 transition-all cursor-pointer flex flex-col shadow-lg ${
                       selectedImage?.creator_sid === imageData.creator_sid
                         ? 'border-green-500 bg-green-50 shadow-green-200' 
                         : hasVoted

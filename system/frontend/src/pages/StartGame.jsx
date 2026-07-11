@@ -21,6 +21,28 @@ export default function JoinGame() {
   const [apiKey, setApiKey] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
   const [apiKeyError, setApiKeyError] = useState('');
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(`imaginaition.com/${gameCode}`);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy link:', error);
+    }
+  };
+
+  const handleCopyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(gameCode);
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy game code:', error);
+    }
+  };
 
   // Compute API key validity without causing re-renders
   const isApiKeyValid = apiKey && apiKey.trim() !== '' && apiKey.startsWith('sk-') && apiKey.length >= 20;
@@ -92,8 +114,9 @@ export default function JoinGame() {
           localStorage.setItem(sessionKey, response.data.session_token);
           console.log(`🔑 Session token stored: ${sessionKey}`);
         }
-        // Navigate with player name in URL for multi-tab support
-        navigate(`/play/${gameCode}?player=${encodeURIComponent(playerName)}`);
+        // Navigate with player name in URL for multi-tab support; `host=true` marks
+        // this tab as the room creator so PlayGame can show the "End Game" control
+        navigate(`/play/${gameCode}?player=${encodeURIComponent(playerName)}&host=true`);
       })
       .catch((error) => {
         console.error(
@@ -111,44 +134,71 @@ export default function JoinGame() {
       });
   };
   return (
-    <div className="h-svh flex flex-col">
+    <div className="min-h-svh flex flex-col">
       <div className="-z-10">
         <TopBar />
       </div>
-      <div className="h-full items-center flex">
+      <div className="flex-1 items-center flex py-6">
         <div className="main-container font-inter w-full">
           <Container>
             <BackButton />
-            <div className="grid grid-cols-4 justify-items-center pb-12">
-              <div className="col-start-1 col-span-full font-medium text-[2.5rem] mb-8 font-gooper flex items-center justify-center gap-4">
-                Start a Game
+            <div className="flex flex-col items-center px-5 sm:px-8 pb-8">
+              <div className="w-full max-w-xl flex flex-wrap items-center justify-between gap-3 mb-6">
+                <h1 className="font-gooper font-bold text-[1.75rem] sm:text-[2.5rem]">
+                  Start a Game
+                </h1>
                 <button
                   onClick={() => setIsConfigModalOpen(true)}
-                  className="text-lg bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg border"
+                  className="shrink-0 text-base sm:text-lg bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg border"
                   title="Game Configuration"
                 >
                   ⚙️ Config
                 </button>
               </div>
-              <div className="col-start-2 col-span-2 mb-16 justify-self-start w-full">
-                <div className="text-[1.408rem] mb-20">
-                  <div className="font-semibold flex gap-2">
-                    Link:{' '}
-                    <p className="font-normal">imaginaition.com/{gameCode}</p>
+
+              <div className="w-full max-w-xl">
+                {/* Share card: link + code, each with a working copy button */}
+                <div className="bg-[#F5F5F5] rounded-2xl p-4 sm:p-6 mb-6">
+                  <p className="text-base sm:text-lg font-semibold text-gray-600 mb-1">
+                    Invite link
+                  </p>
+                  <div className="flex gap-2 mb-4">
+                    <div className="flex-1 min-w-0 bg-white border border-[#D3D3D3] rounded-xl px-4 py-3 text-base sm:text-lg truncate">
+                      imaginaition.com/{gameCode}
+                    </div>
+                    <button
+                      onClick={handleCopyLink}
+                      className="shrink-0 px-4 py-3 bg-black text-white rounded-xl text-sm sm:text-base font-semibold hover:bg-gray-800 transition-colors"
+                    >
+                      {linkCopied ? 'Copied!' : 'Copy'}
+                    </button>
                   </div>
-                  <div className="font-semibold flex gap-2">
-                    Game code: <p className="font-normal">{gameCode}</p>
+
+                  <p className="text-base sm:text-lg font-semibold text-gray-600 mb-1">
+                    Game code
+                  </p>
+                  <div className="flex gap-2 mb-4">
+                    <div className="flex-1 bg-white border border-[#D3D3D3] rounded-xl px-4 py-3 text-xl sm:text-2xl font-bold tracking-widest text-center">
+                      {gameCode}
+                    </div>
+                    <button
+                      onClick={handleCopyCode}
+                      className="shrink-0 px-4 py-3 bg-black text-white rounded-xl text-sm sm:text-base font-semibold hover:bg-gray-800 transition-colors"
+                    >
+                      {codeCopied ? 'Copied!' : 'Copy'}
+                    </button>
                   </div>
-                  <div className="font-semibold flex gap-2 mt-4">
-                    Config: <p className="font-normal">{gameConfig.selectedCategories.length} rounds, {gameConfig.selectedCategories.length} categories</p>
-                  </div>
+
+                  <p className="text-base sm:text-lg text-gray-600">
+                    {gameConfig.selectedCategories.length} rounds · {gameConfig.selectedCategories.length} categories
+                  </p>
                 </div>
 
                 {/* OpenAI API Key Section */}
                 <div className="mb-6">
                   <label
                     htmlFor="api-key"
-                    className="mb-2 text-xl font-semibold block"
+                    className="mb-2 text-lg sm:text-xl font-semibold block"
                   >
                     OpenAI API Key (Required)
                   </label>
@@ -173,7 +223,7 @@ export default function JoinGame() {
                       }}
                       id="api-key"
                       name="api-key"
-                      className={`rounded-xl border w-full bg-[#FAFAFA] pt-[1rem] pb-[1rem] pl-[1.25rem] pr-[3rem] text-[1.5rem] ${
+                      className={`rounded-xl border w-full min-w-0 bg-[#FAFAFA] py-4 pl-4 pr-12 text-lg sm:text-xl ${
                         apiKeyError ? 'border-red-500' : 'border-[#D3D3D3]'
                       }`}
                       placeholder="sk-..."
@@ -186,50 +236,52 @@ export default function JoinGame() {
                       {showApiKey ? "🙈" : "👁️"}
                     </button>
                   </div>
-                  <p className="text-sm text-gray-600 mt-2">
+                  <p className="text-sm sm:text-base text-gray-600 mt-2">
                     Your API key will NOT be stored and is only used for this game session.
                   </p>
                   {apiKeyError && (
-                    <p className="text-sm text-red-600 mt-1">{apiKeyError}</p>
+                    <p className="text-sm sm:text-base text-red-600 mt-1">{apiKeyError}</p>
                   )}
                 </div>
 
-                <div className="mb-3">
+                {/* Player name */}
+                <div className="mb-8">
                   <label
                     htmlFor="player-name"
-                    className="mb-2 mt-5 text-xl font-semibold"
+                    className="mb-2 text-lg sm:text-xl font-semibold block"
                   >
                     Your name?
                   </label>
+                  <input
+                    type="text"
+                    ref={playerNameRef}
+                    id="player-name"
+                    name="player-name"
+                    className="rounded-xl border border-[#D3D3D3] w-full min-w-0 bg-[#FAFAFA] py-4 px-4 text-lg sm:text-xl"
+                    placeholder="Enter name"
+                  ></input>
                 </div>
-                <input
-                  type="text"
-                  ref={playerNameRef}
-                  id="player-name"
-                  name="player-name"
-                  className="rounded-xl border border-[#D3D3D3] w-full bg-[#FAFAFA] pt-[1rem] pb-[1rem] pl-[1.25rem] pr-[1.25rem] text-[1.5rem] text-[1.5rem]"
-                  placeholder="Enter your (or your team's) name"
-                ></input>
+
+                <button
+                  onClick={() => {
+                    console.log(playerNameRef.current.value);
+                    handleStartGame();
+                  }}
+                  disabled={!isApiKeyValid}
+                  className={`w-full font-medium border rounded-xl text-xl sm:text-2xl py-4 font-gooper transition-colors ${
+                    !isApiKeyValid
+                      ? 'border-gray-400 text-gray-400 bg-gray-200 cursor-not-allowed'
+                      : 'border-black text-[#FFFFFF] bg-[#111111] hover:bg-gray-800'
+                  }`}
+                >
+                  Start Game
+                </button>
               </div>
-              <button
-                onClick={() => {
-                  console.log(playerNameRef.current.value);
-                  handleStartGame();
-                }}
-                disabled={!isApiKeyValid}
-                className={`font-medium border rounded-xl text-[2rem] py-[0.75rem] px-[2rem] col-start-2 col-span-2 justify-self-center font-gooper transition-colors ${
-                  !isApiKeyValid
-                    ? 'border-gray-400 text-gray-400 bg-gray-200 cursor-not-allowed'
-                    : 'border-black text-[#FFFFFF] bg-[#111111] hover:bg-gray-800'
-                }`}
-              >
-                Start Game
-              </button>
             </div>
           </Container>
         </div>
       </div>
-      
+
       <GameConfigModal
         isOpen={isConfigModalOpen}
         onClose={() => setIsConfigModalOpen(false)}

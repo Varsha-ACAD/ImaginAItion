@@ -37,7 +37,7 @@ export default function GameInstruction({ currentTurn }) {
       {/* updated to the new 4-phase instructions copy */}
       {currentTurn % 4 === 0 ? (
         <p className="justify-self-center text-[#4E4E4E] font-inter">
-          Generate an image that best recreates the given image with as few as possible words in prompt.
+          Generate an image that best recreates the given image with as few words as possible in the prompt.
         </p>
       ) : currentTurn % 4 === 1 ? (
         <p className="justify-self-center text-[#4E4E4E] font-inter">
@@ -45,7 +45,7 @@ export default function GameInstruction({ currentTurn }) {
         </p>
       ) : currentTurn % 4 === 2 ? (
         <p className="justify-self-center text-[#4E4E4E] font-inter">
-          See who got the most points and used the shortest prompt
+          See who got the most points and used the shortest prompt!
         </p>
       ) : null}
     </div>

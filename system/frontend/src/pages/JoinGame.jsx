@@ -66,23 +66,23 @@ export default function JoinGame() {
     console.log(response.data.room);
   };
   return (
-    <div className="h-svh flex flex-col">
+    <div className="min-h-svh flex flex-col">
       <div className="-z-10">
         <TopBar />
       </div>
-      <div className="h-full items-center flex">
+      <div className="flex-1 items-center flex">
         <div className="main-container font-inter w-full">
           <Container>
             <BackButton />
-            <div className="grid grid-cols-4 justify-items-center pb-12">
-              <div className="col-start-1 col-span-full font-medium text-[2.5rem] mb-8 font-gooper">
+            <div className="flex flex-col items-center px-5 sm:px-8 pb-8">
+              <div className="w-full max-w-xl font-medium text-[1.75rem] sm:text-[2.5rem] mb-6 sm:mb-8 font-gooper text-center">
                 Join a Game
               </div>
-              <div className="col-start-2 col-span-2 mb-16 justify-self-start w-full">
+              <div className="mb-8 w-full max-w-xl">
                 <div className="mb-3">
                   <label
                     htmlFor="game-code"
-                    className="mb-2 text-xl font-semibold"
+                    className="mb-2 text-lg sm:text-xl font-semibold"
                   >
                     Game code
                   </label>
@@ -92,13 +92,13 @@ export default function JoinGame() {
                   id="game-code"
                   ref={gameCodeRef}
                   name="game-code"
-                  className="rounded-xl border border-[#D3D3D3] w-full bg-[#FAFAFA] pt-[1rem] pb-[1rem] pl-[1.25rem] pr-[1.25rem] text-[1.5rem] mb-3"
+                  className="rounded-xl border border-[#D3D3D3] w-full min-w-0 bg-[#FAFAFA] pt-[1rem] pb-[1rem] pl-[1.25rem] pr-[1.25rem] text-base sm:text-[1.5rem] mb-3"
                   placeholder="Enter game code"
                 ></input>
                 <div className="mb-3">
                   <label
                     htmlFor="player-name"
-                    className="mb-2 mt-5 text-xl font-semibold"
+                    className="mb-2 mt-5 text-lg sm:text-xl font-semibold"
                   >
                     Name
                   </label>
@@ -108,8 +108,8 @@ export default function JoinGame() {
                   id="player-name"
                   ref={playerNameRef}
                   name="player-name"
-                  className="rounded-xl border border-[#D3D3D3] w-full bg-[#FAFAFA] pt-[1rem] pb-[1rem] pl-[1.25rem] pr-[1.25rem] text-[1.5rem] text-[1.5rem]"
-                  placeholder="Enter your (or your team's) name"
+                  className="rounded-xl border border-[#D3D3D3] w-full min-w-0 bg-[#FAFAFA] pt-[1rem] pb-[1rem] pl-[1.25rem] pr-[1.25rem] text-base sm:text-[1.5rem]"
+                  placeholder="Enter name"
                 ></input>
               </div>
               {/* TODO: Add a link to the button */}
@@ -118,7 +118,7 @@ export default function JoinGame() {
                   console.log(gameCodeRef.current.value);
                   joinGame();
                 }}
-                className="font-medium border border-black rounded-xl text-[2rem] text-[#FFFFFF] pl-8 pr-8 pb-3 pt-3 bg-[#111111] col-start-2 col-span-2 justify-self-center font-gooper"
+                className="w-full sm:w-auto max-w-xl font-medium border border-black rounded-xl text-lg sm:text-[2rem] text-[#FFFFFF] px-8 py-3 sm:pl-8 sm:pr-8 sm:pb-3 sm:pt-3 bg-[#111111] font-gooper"
               >
                 Join Game
               </button>

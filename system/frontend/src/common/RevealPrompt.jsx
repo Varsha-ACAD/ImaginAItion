@@ -247,9 +247,9 @@ export default function RevealPrompt() {
           
       
       {/* layout: reference image on the left + results area on the right */}
-      <div className="flex h-full w-full px-8 gap-6">
+      <div className="flex flex-col lg:flex-row h-auto lg:h-full w-full px-2 sm:px-4 lg:px-8 gap-4 lg:gap-6">
         {/* left-side reference-image area */}
-        <div className="w-1/4 flex flex-col">
+        <div className="w-full lg:w-1/4 flex flex-col">
           <h3 className="text-lg font-inter font-medium mb-3 text-center">Reference Image</h3>
           <div className="flex-1 border border-gray-300 rounded-2xl p-4 bg-gray-50 flex flex-col items-center justify-start">
             {isLoadingReference ? (
@@ -262,7 +262,7 @@ export default function RevealPrompt() {
                 <img
                   src={getImageUrl(referenceImage.image_path)}
                   alt={referenceImage.description}
-                  className="max-w-full max-h-full rounded-xl object-contain mb-3"
+                  className="max-w-full max-h-[14rem] lg:max-h-full rounded-xl object-contain mb-3"
                   onError={(e) => {
                     console.error('Failed to load image:', e.target.src);
                     e.target.style.display = 'none';
@@ -281,7 +281,7 @@ export default function RevealPrompt() {
         </div>
         
         {/* right-side results area */}
-        <div className="w-2/3 flex flex-col">
+        <div className="w-full lg:w-2/3 flex flex-col">
           <h3 className="text-lg font-inter font-medium mb-3 text-center">
             Prompts Revealed!
           </h3>
@@ -300,8 +300,8 @@ export default function RevealPrompt() {
             </div>
           ) : (
             <div className="flex-1 overflow-auto p-4">
-              {/* two-column grid layout */}
-              <div className="grid grid-cols-2 gap-6">
+              {/* two-column grid layout, stacks to one column on mobile */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 {revealData.map((item, index) => {
                   const isVisible = visibleCards.has(index);
                   const isEasingOut = easingOutCards.has(index);

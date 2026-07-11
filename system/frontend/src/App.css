@@ -4,3 +4,12 @@
   padding-top: clamp(0rem, 5vh, 5rem);
   padding-bottom: clamp(0rem, 10vh, 10rem);
 }
+
+/* On phones, 15vw of side padding eats ~30% of the screen width for no reason —
+   let the content card nearly fill the screen instead. */
+@media (max-width: 640px) {
+  .main-container {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+}

@@ -23,16 +23,15 @@ export default function HowToPlay() {
               <p1 className="block mb-[2rem] text-[#4E4E4E] col-start-1 col-span-full">
                 Compete with your peers to see who can reproduce an image with generative AI most effectively!
                 You want to make your generated image as similar as possible to the original one, but make your
-                prompt as short as possible. Can AI do the right thing when you're so brief? The one who knows AI
-                the best will win!
+                prompt as short as possible. Can AI do the right thing when you're so brief? You'll find out!
               </p1>
               <p1 className="block font-medium text-[1.25rem] col-start-1 col-span-full mb-[0.5rem] justify-self-start font-gooper">
                 How it works
               </p1>
               <p1 className="block mb-[2rem] text-[#4E4E4E] col-start-1 col-span-full justify-self-start">
                 This game needs at least{' '}
-                <rem className="text-[#5A5A5A] font-bold">three players</rem> (for three teams) and has a total of{' '}
-                <rem className="text-[#5A5A5A] font-bold">three steps</rem> in one round.
+                two players (or two teams). Each round has{' '}
+                three phases, explained below.
               </p1>
               <div className="bg-[#D7E5FF] rounded-[0.5rem] grid gap-3 p-8 mb-8 border-[0.125rem] border-black">
                 <svg
@@ -49,10 +48,9 @@ export default function HowToPlay() {
                     fill="#111111"
                   />
                 </svg>
-                <p1 className="block font-medium font-gooper">Prompt</p1>
+                <p1 className="block font-medium font-gooper">Phase 1: Prompt</p1>
                 <p1 className="block text-[#5A5A5A]">
-                  Given an image, generate a reproduction of that image as close as
-                  possible using your prompt, but use as <em>few</em> as possible words!
+                  Given an image, try to recreate it exactly, but use as <em>few</em> words as possible!
                 </p1>
               </div>
               <div className="bg-[#D7E5FF] rounded-[0.5rem] grid gap-3 p-8 mb-8 border-[0.125rem] border-black">
@@ -70,10 +68,9 @@ export default function HowToPlay() {
                     fill="#111111"
                   />
                 </svg>
-                <p1 className="block font-medium font-gooper">Vote</p1>
+                <p1 className="block font-medium font-gooper">Phase 2: Vote</p1>
                 <p1 className="block text-[#5A5A5A]">
-                  Now you get to be the judge! Among the images generated other
-                  players, vote on the image most similar to the original image.
+                  Now you get to be the judge! Vote on the image most similar to the original image.
                 </p1>
               </div>
               <div className="bg-[#D7E5FF] rounded-[0.5rem] grid gap-3 p-8 mb-8 border-[0.125rem] border-black">
@@ -91,18 +88,16 @@ export default function HowToPlay() {
                     fill="#111111"
                   />
                 </svg>
-                <p1 className="block font-medium font-gooper">Reveal</p1>
+                <p1 className="block font-medium font-gooper">Phase 3: Reveal</p1>
                 <p1 className="block text-[#5A5A5A]">
-                  Check out all the prompts, images, votes, and the scores. Reflect
-                  and learn from each other -- do better the next round!
+                  Check out all the prompts, images, votes, and the scores. Reflect and learn from each other. Do better in the next round!
                 </p1>
               </div>
               <p1 className="block font-medium text-[1.25rem] col-start-1 col-span-full mb-[0.5rem] justify-self-start font-gooper">
                 Scoring
               </p1>
               <p1 className="block text-[#4E4E4E] col-start-1 col-span-full justify-self-start">
-                Players get one point for each vote from other players, and the one with the longest prompt gets one
-                point penalty.
+                Players get one point for each vote from other players, and the player with the longest prompt loses one point.
               </p1>
             </div>
           </Container>

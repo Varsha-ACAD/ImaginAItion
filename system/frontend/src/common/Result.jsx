@@ -1,10 +1,30 @@
 import { useEffect, useState } from 'react';
+import PropTypes from 'prop-types';
 import axios from 'axios';
 import { useParams } from 'react-router-dom';
 import sio from './websocket';
 import { MetroSpinner } from 'react-spinners-kit';
 import Waiting from './Waiting';
 import { getImageUrl } from '../config/api';
+
+// Compact word-labeled badge used in the results table so a player's row
+// (name, image, prompt, stats) fits on one line even on narrow phones.
+function StatBadge({ value, label, colorClass }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full text-[0.7rem] sm:text-xs font-bold whitespace-nowrap ${colorClass}`}
+    >
+      <span>{value}</span>
+      <span>{label}</span>
+    </span>
+  );
+}
+
+StatBadge.propTypes = {
+  value: PropTypes.number.isRequired,
+  label: PropTypes.string.isRequired,
+  colorClass: PropTypes.string,
+};
 
 export default function Result() {
   const { gameCode } = useParams();
@@ -217,60 +237,44 @@ export default function Result() {
             )}
             {finalResults.length > 0 && !hasWinner() && (
               <>
-                Great effort from all!
+                 Onwards and upwards.
               </>
             )}
           </p>
         </div>
       </div>
 
-      {/* reference-image area - now at the top for easy comparison */}
+      {/* reference-image row - now at the top for easy comparison */}
       {referenceImage && (
-        <div className="px-6 py-2 border-b border-gray-200">
-          <div className="flex items-center gap-8 py-2 bg-gray-200 rounded-lg px-4 py-4">
-            {/* Original Image label and placeholder */}
-            <div className="flex min-w-0 w-72">
-              <div className="bg-white border border-gray-300 px-3 py-2 rounded-full">
-                <span className="text-black font-bold text-base whitespace-nowrap">Original Image</span>
-              </div>
-            </div>
-            
-            <div className="flex items-center flex-1 gap-6">
-              {/* reference image */}
-              <div className="w-24 h-24">
-                <img
-                  src={getImageUrl(referenceImage.image_path)}
-                  alt={referenceImage.description}
-                  className="w-24 h-24 rounded-lg object-cover border border-gray-200"
-                  onError={(e) => {
-                    console.error('Failed to load image:', e.target.src);
-                    e.target.style.display = 'none';
-                  }}
-                />
-              </div>
-              
-              {/* Prompt info */}
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-gray-500 mb-1">Prompt</p>
-                <p className="text-sm font-medium">
-                  {highlightOriginalPrompt(referenceImage.description)}
-                </p>
-              </div>
-            </div>
-            
-            {/* Token stats */}
-            <div className="text-center min-w-[120px]">
-              <div className="text-xl font-bold">
-                {referenceImage.description ? referenceImage.description.split(' ').length : 0}
-              </div>
-              <div className="text-xs text-gray-500">
-                Tokens
-              </div>
-            </div>
-            
-            {/* empty placeholder to keep alignment */}
-            <div className="text-center min-w-[60px]">
-            </div>
+        <div className="px-3 sm:px-6 py-2 border-b border-gray-200">
+          <div className="flex items-center gap-2 sm:gap-3 bg-gray-200 rounded-lg px-2 py-2 sm:px-4 sm:py-3">
+            {/* "Original" label */}
+            <span className="shrink-0 max-w-[3.5rem] sm:max-w-none truncate bg-white border border-gray-300 rounded-full px-2 py-1 sm:px-3 sm:py-1.5 text-[0.7rem] sm:text-sm font-bold">
+              Original
+            </span>
+
+            {/* reference image */}
+            <img
+              src={getImageUrl(referenceImage.image_path)}
+              alt={referenceImage.description}
+              className="w-10 h-10 sm:w-14 sm:h-14 rounded-lg object-cover border border-gray-200 shrink-0"
+              onError={(e) => {
+                console.error('Failed to load image:', e.target.src);
+                e.target.style.display = 'none';
+              }}
+            />
+
+            {/* prompt */}
+            <p className="flex-1 min-w-0 text-xs sm:text-sm font-medium line-clamp-2">
+              {highlightOriginalPrompt(referenceImage.description)}
+            </p>
+
+            {/* token count badge */}
+            <StatBadge
+              value={referenceImage.description ? referenceImage.description.split(' ').length : 0}
+              label="tokens"
+              colorClass="bg-blue-100 text-blue-700 shrink-0"
+            />
           </div>
         </div>
       )}
@@ -290,70 +294,55 @@ export default function Result() {
             </p>
           </div>
         ) : (
-          <div className="space-y-2 flex-1 overflow-auto px-6">
+          <div className="space-y-1 flex-1 overflow-auto px-3 sm:px-6">
             {finalResults.map((item, index) => (
               <>
-                <div 
+                <div
                   key={item.creator_sid}
-                  className="flex items-center gap-8 py-2"
+                  className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 py-2"
                 >
-                  {/* player name and score */}
-                  <div className="flex min-w-0 w-72">
-                    <div className="bg-white border border-gray-300 px-3 py-2 rounded-full">
-                      <span className="text-black font-bold text-sm whitespace-nowrap">{item.creator_name}</span>
-                    </div>
-                    <div className="bg-green-500 text-white px-3 py-2 rounded-full text-sm font-bold whitespace-nowrap absolute left-52">
-                      + {item.score_info.total_score} points
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center flex-1 gap-6">
+                  {/* player name - own line on mobile so it's never truncated/squeezed away */}
+                  <span className="w-fit sm:shrink-0 sm:max-w-[7rem] sm:truncate bg-white border border-gray-300 rounded-full px-2 py-1 sm:px-3 sm:py-1.5 text-[0.7rem] sm:text-sm font-bold">
+                    {item.creator_name}
+                  </span>
+
+                  <div className="flex items-center gap-2 sm:gap-3 sm:flex-1 min-w-0">
                     {/* generated image */}
-                    <div className="w-24 h-24">
-                      <img
-                        src={getImageUrl(item.image_url)}
-                        alt={`Creation by ${item.creator_name}`}
-                        className="w-24 h-24 rounded-lg object-cover border border-gray-200"
-                        onError={(e) => {
-                          console.error('Failed to load image:', e.target.src);
-                          e.target.style.display = 'none';
-                        }}
-                      />
-                    </div>
-                    
-                    {/* Prompt info */}
+                    <img
+                      src={getImageUrl(item.image_url)}
+                      alt={`Creation by ${item.creator_name}`}
+                      className="w-10 h-10 sm:w-14 sm:h-14 rounded-lg object-cover border border-gray-200 shrink-0"
+                      onError={(e) => {
+                        console.error('Failed to load image:', e.target.src);
+                        e.target.style.display = 'none';
+                      }}
+                    />
+
+                    {/* prompt */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-gray-500 mb-1">Prompt</p>
-                      <p className="text-sm font-medium">
+                      <p className="text-xs sm:text-sm font-medium line-clamp-2">
                         {highlightMatchingWords(item.prompt, referenceDescription)}
                       </p>
+                      {item.score_info.penalty > 0 && (
+                        <p className="text-[0.65rem] sm:text-xs text-red-500 mt-0.5">
+                          -1 for longest prompt
+                        </p>
+                      )}
                     </div>
-                  </div>
-                  
-                  {/* Token stats */}
-                  <div className="text-center min-w-[120px]">
-                    <div className="text-xl font-bold">
-                      {item.score_info.prompt_tokens}
+
+                    {/* stat badges: tokens used, votes earned */}
+                    <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1 shrink-0">
+                      <StatBadge
+                        value={item.score_info.prompt_tokens}
+                        label="tokens"
+                        colorClass="bg-blue-100 text-blue-700"
+                      />
+                      <StatBadge
+                        value={item.vote_count}
+                        label="votes"
+                        colorClass="bg-pink-100 text-pink-700"
+                      />
                     </div>
-                    <div className="text-xs text-gray-500">
-                      Tokens
-                    </div>
-                    {item.score_info.penalty > 0 && (
-                      <div className="text-red-500 text-xs mt-1">-1 for longest prompt</div>
-                    )}
-                  </div>
-                  
-                  {/* Votes stats */}
-                  <div className="text-center min-w-[60px]">
-                    <div className="text-xl font-bold">
-                      {item.vote_count}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      Votes
-                    </div>
-                    {item.vote_count > 0 && (
-                      <div className="text-green-500 text-xs mt-1">+{item.vote_count} point{item.vote_count > 1 ? 's' : ''}</div>
-                    )}
                   </div>
                 </div>
                 {index < finalResults.length - 1 && (
@@ -367,12 +356,12 @@ export default function Result() {
       
       {/* bottom area: reflection question and button on the same row */}
       {finalResults.length > 0 && (
-        <div className="mt-6 flex items-center gap-4 p-4 border-t-2 border-gray-200">
+        <div className="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 p-4 border-t-2 border-gray-200">
           <div className="flex-1 flex items-center gap-2 text-gray-800 bg-gray-100 px-4 py-2 rounded-lg">
-            <span className="text-base">Discuss time! Share your thoughts with other players and feel free to try two more prompts!</span>
+            <span className="text-sm sm:text-base">Discuss time! Share your thoughts with other players and feel free to try two more prompts!</span>
           </div>
           <button
-            className="bg-black text-white px-6 py-2 rounded-xl font-semibold hover:bg-gray-800 transition-colors"
+            className="w-full sm:w-auto bg-black text-white px-6 py-2 rounded-xl font-semibold hover:bg-gray-800 transition-colors"
             onClick={handlePlayerDone}
           >
             {round >= totalRounds ? 'Finish Game' : 'Next round'}

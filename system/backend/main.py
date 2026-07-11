@@ -330,8 +330,9 @@ def verify_admin_token(token: str = Query(None)):
 class Room:
     def __init__(self, room_id: str, tutorial: bool, categories: List[str] = None):
         self.room_id = room_id
+        self.host_sid = None  # sid of the player who created the room
         # Stores player WebSocket connections
-        self.max_players = 3
+        self.max_players = None  # no cap; the host starts the game manually once ready
         self.players: Dict[str, str] = {}
         self.sid_to_players: Dict[str, str] = {}  # {sid: player_id}
         self.tutorial = tutorial
@@ -393,7 +394,7 @@ class Room:
     def add_player(self, sid: str, player_id: str):
         try:
             print(f"🔧 add_player called: sid={sid[:8]}..., player_id={player_id}, current players={len(self.players)}")
-            if len(self.players) < self.max_players:
+            if self.max_players is None or len(self.players) < self.max_players:
                 self.players[player_id] = sid
                 print(f"🔧 Initializing player_state for {sid[:8]}...")
                 self.player_state[sid] = {
@@ -634,6 +635,10 @@ def reconnect_player(session_token: str, new_sid: str):
     # 6. Update session token mapping
     update_session_sid(session_token, new_sid)
 
+    # 7. Keep host tracking pointed at the host's current sid
+    if room.host_sid == old_sid:
+        room.host_sid = new_sid
+
     print(f"✅ Reconnected {player_name} in room {room_id}: {old_sid[:8]}... -> {new_sid[:8]}...")
     return {
         "room_id": room_id,
@@ -867,10 +872,12 @@ async def create_game_room(request: RoomRequestCreate):
         room = room_manager.get_room(request.room_id)
         room.game_state["current_round"] = 1
 
+    # The player who creates the room is the host, regardless of whether they set an API key
+    room_manager.rooms[request.room_id].host_sid = request.sid
+
     # Store API key if provided
     if request.api_key:
         room_manager.rooms[request.room_id].api_key = request.api_key
-        room_manager.rooms[request.room_id].host_sid = request.sid
         print(f"🔑 Room {request.room_id} configured with custom API key")
 
     room_manager.rooms[request.room_id].add_player(
@@ -890,7 +897,7 @@ async def create_game_room(request: RoomRequestCreate):
 @router.post("/api/join-room")
 async def get_room(request: RoomRequest):
     room = room_manager.get_room(request.room_id)
-    if room and len(room.players) < room.max_players:
+    if room and (room.max_players is None or len(room.players) < room.max_players):
         room.add_player(request.sid, request.player_name)
         sid_to_room[request.sid] = request.room_id
         # join the user to the Socket.IO room immediately so they receive broadcasts
@@ -992,20 +999,49 @@ async def get_players(sid, data=None):
     await sio.emit("players", {"players": players}, room=room_id)
     await sio.emit("num_players", {"num_players": len(players)}, room=room_id)
 
-    # Only start game if it hasn't been started yet
-    if len(players) == room.max_players and room.game_state.get("started_at") is None:
-        room.game_state["started_at"] = get_timestamp()
 
-        # Initialize game logging
-        game_logger.start_game_log(room_id, room.sid_to_players)
+@sio.on("start-game")
+async def start_game(sid, data=None):
+    """Let the host manually kick off the game once everyone they want has joined."""
+    room_id = None
+    if data and isinstance(data, dict) and "room_id" in data:
+        room_id = data["room_id"]
+    else:
+        room_id = sid_to_room.get(sid)
 
-        # notify all players the game has started
-        await sio.emit("game-started", {
-            "message": "Game started! All players joined.",
-            "started_at": room.game_state["started_at"]
-        }, room=room_id)
-        # new 3-phase flow: start at round 1, turn 0 (Generate phase)
-        await start_turn_timer(room, 1, 0)
+    if not room_id:
+        await sio.emit("error", {"message": "Player not in any room"}, room=sid)
+        return
+
+    room = room_manager.get_room(room_id)
+    if not room:
+        await sio.emit("error", {"message": "Room not found"}, room=sid)
+        return
+
+    if room.host_sid != sid:
+        await sio.emit("error", {"message": "Only the player who started the game can start it"}, room=sid)
+        return
+
+    if room.game_state.get("started_at") is not None:
+        # already started; ignore duplicate clicks
+        return
+
+    if len(room.players) < 2:
+        await sio.emit("error", {"message": "Need at least 2 players to start"}, room=sid)
+        return
+
+    room.game_state["started_at"] = get_timestamp()
+
+    # Initialize game logging
+    game_logger.start_game_log(room_id, room.sid_to_players)
+
+    # notify all players the game has started
+    await sio.emit("game-started", {
+        "message": "The host started the game!",
+        "started_at": room.game_state["started_at"]
+    }, room=room_id)
+    # new 4-phase flow: start at round 1, turn 0 (Generate phase)
+    await start_turn_timer(room, 1, 0)
 
 
 @ sio.on("connect")
@@ -1057,7 +1093,7 @@ async def start_turn_timer(room, round_num, turn_num):
             # For other phases, move to next turn immediately
             print(f"⏰ Timer finished for room {room.room_id}, moving to next turn")
             update_game_turn(room)
-            await move_to_next_turn(room, triggered_by_timer=True)
+            await move_to_next_turn(room)
 
     # Start and store the new timer task
     if time_limit != -1:
@@ -1075,38 +1111,13 @@ async def handle_generate_timer_end(room, round_num):
     
     # Now move to next turn
     update_game_turn(room)
-    await move_to_next_turn(room, triggered_by_timer=True)
+    await move_to_next_turn(room)
 
 async def handle_voting_timer_end(room, round_num, turn_num):
-    """Handle when Voting phase timer ends - check if all players voted"""
-    print(f"🔄 Handling voting timer end for room {room.room_id}, round {round_num}")
-    
-    if check_all_players_voted(room, round_num, turn_num):
-        print("✅ All players have voted, proceeding to next phase")
-        update_game_turn(room)
-        await move_to_next_turn(room, triggered_by_timer=True)
-    else:
-        print("⚠️ Not all players have voted, showing reminder and waiting")
-        # send a voting reminder to players who have not voted
-        await send_vote_reminders(room, round_num, turn_num)
-
-async def send_vote_reminders(room, round_num, turn_num):
-    """Send vote reminders to players who haven't voted yet"""
-    turns_data = room.game_state["rounds"][round_num]["turns"][turn_num]["data"]
-    
-    # find players who have not voted yet - using the actual SID
-    players_not_voted = []
-    for player_sid in room.players.values():  # use .values() to get the actual SID
-        if player_sid not in turns_data or "vote" not in turns_data[player_sid]:
-            players_not_voted.append(player_sid)
-    
-    print(f"📢 Sending vote reminders to {len(players_not_voted)} players: {players_not_voted}")
-    
-    # send a reminder to all players who have not voted
-    for player_sid in players_not_voted:
-        await sio.emit("show_vote_reminder", {
-            "message": "Please vote to continue the game"
-        }, room=player_sid)
+    """Handle when Voting phase timer ends - force-advance regardless of who voted"""
+    print(f"🔄 Voting timer expired for room {room.room_id}, round {round_num}, forcing advance to next phase")
+    update_game_turn(room)
+    await move_to_next_turn(room)
 
 async def wait_for_all_generations(room, round_num):
     """Wait for all pending image generations to complete"""
@@ -1222,7 +1233,7 @@ async def start_turn_timer_temp(sid):
     if not room:
         return
     
-    if len(room.players) < room.max_players:
+    if room.max_players is not None and len(room.players) < room.max_players:
         return
     
     # start the timer for the current round/turn instead of always 1,0
@@ -1349,21 +1360,20 @@ def update_game_turn(room, player_turns=None):
         return False
 
 
-async def move_to_next_turn(room, triggered_by_timer=False):
-    print(f"🔄 move_to_next_turn called for room {room.room_id}, current_turn: {room.game_state['current_turn']}, current_round: {room.game_state['current_round']}, triggered_by_timer: {triggered_by_timer}")
+async def move_to_next_turn(room):
+    print(f"🔄 move_to_next_turn called for room {room.room_id}, current_turn: {room.game_state['current_turn']}, current_round: {room.game_state['current_round']}")
 
     if room.is_game_over():
         print(f"🏁 Game over for room {room.room_id}")
         await sio.emit("game_over", {"message": "Game finished!"}, room=room.room_id)
     else:
-        # If triggered by timer, manually update all player states
-        if triggered_by_timer:
-            print("⏰ Timer triggered transition, updating all player states")
-            for sid in room.player_state:
-                old_turn = room.player_state[sid]["current_turn"]
-                room.player_state[sid]["current_turn"] = room.game_state["current_turn"]
-                print(f"👤 Updated player {sid} turn: {old_turn} -> {room.player_state[sid]['current_turn']}")
-        
+        # keep every player's own turn counter in sync with the room's turn,
+        # regardless of what triggered the transition (timer or vote auto-advance)
+        for sid in room.player_state:
+            old_turn = room.player_state[sid]["current_turn"]
+            room.player_state[sid]["current_turn"] = room.game_state["current_turn"]
+            print(f"👤 Updated player {sid} turn: {old_turn} -> {room.player_state[sid]['current_turn']}")
+
         print(f"📤 Sending next-turn-ready: round={room.game_state['current_round']}, turn={room.game_state['current_turn']}")
         
         # compute the global turn number for the frontend
@@ -1384,6 +1394,39 @@ async def move_to_next_turn(room, triggered_by_timer=False):
         # Start new turn timer
         asyncio.create_task(start_turn_timer(
             room, room.game_state["current_round"], room.game_state["current_turn"]))
+
+
+@sio.on("end-game")
+async def end_game(sid, data=None):
+    """Let the player who created the room end it early, kicking everyone to the results screen."""
+    room_id = None
+    if data and isinstance(data, dict) and "room_id" in data:
+        room_id = data["room_id"]
+    else:
+        room_id = sid_to_room.get(sid)
+
+    if not room_id:
+        await sio.emit("error", {"message": "Player not in any room"}, room=sid)
+        return
+
+    room = room_manager.get_room(room_id)
+    if not room:
+        await sio.emit("error", {"message": "Room not found"}, room=sid)
+        return
+
+    if room.host_sid != sid:
+        await sio.emit("error", {"message": "Only the player who started the game can end it"}, room=sid)
+        return
+
+    print(f"🛑 Host {sid[:8]}... ended room {room_id} early")
+
+    # stop any in-flight turn timer so it can't fire after the game has ended
+    if room.room_id in turn_timers:
+        turn_timers[room.room_id].cancel()
+        del turn_timers[room.room_id]
+
+    room.game_state["ended_at"] = get_timestamp()
+    await sio.emit("game_over", {"message": "The host ended the game early."}, room=room.room_id)
 
 
 @sio.on("player-done")
@@ -1641,7 +1684,7 @@ async def vote_for_image(request: VoteRequest):
         
         # advance to the next phase
         update_game_turn(room)
-        await move_to_next_turn(room, triggered_by_timer=False)
+        await move_to_next_turn(room)
     
     return {"message": "Vote recorded successfully"}
 
@@ -1778,8 +1821,8 @@ def calculate_score(prompt, vote_count, prompt_tokens_list, player_tokens):
         if player_tokens > 0 and player_tokens == max_tokens:
             penalty = 1
     
-    # final score
-    final_score = max(0, vote_score - penalty)
+    # final score (negative totals are allowed, e.g. 0 votes with a longest-prompt penalty)
+    final_score = vote_score - penalty
     
     return {
         "total_score": final_score,

@@ -405,7 +405,7 @@ export default function Generate({ currentTurn, gameStarted: gameStartedProp, on
           {/* TODO: Add image that was clicked from previous view */}
           <img
             src={confirmImage}
-            className="w-[32rem] h-[32rem]"
+            className="w-full max-w-[20rem] sm:max-w-[24rem] lg:max-w-[32rem] aspect-square"
             alt="background"
           />
           <div className="flex justify-stretch gap-[1.25rem] mt-4">
@@ -437,9 +437,9 @@ export default function Generate({ currentTurn, gameStarted: gameStartedProp, on
           </div>
           
           {/* new layout: reference image on the left + chat area on the right */}
-          <div className="flex h-[45rem] w-full px-8 gap-6">
+          <div className="flex flex-col lg:flex-row h-auto lg:h-[45rem] w-full px-2 sm:px-4 lg:px-8 gap-4 lg:gap-6">
             {/* left-side reference-image area */}
-            <div className="w-1/4 flex flex-col">
+            <div className="w-full lg:w-1/4 flex flex-col">
               <h3 className="text-lg font-inter font-medium mb-3 text-center">Reference Image</h3>
               <div className="flex-1 border border-gray-300 rounded-2xl p-4 bg-gray-50 flex flex-col items-center justify-center">
                 {!gameStarted ? (
@@ -462,7 +462,7 @@ export default function Generate({ currentTurn, gameStarted: gameStartedProp, on
                     <img
                       src={getImageUrl(referenceImage.image_path)}
                       alt={referenceImage.description}
-                      className="max-w-full max-h-[20rem] rounded-xl object-contain mb-3"
+                      className="max-w-full max-h-[14rem] lg:max-h-[20rem] rounded-xl object-contain mb-3"
                       onError={(e) => {
                         console.error('Failed to load image:', e.target.src);
                         e.target.style.display = 'none';
@@ -480,7 +480,7 @@ export default function Generate({ currentTurn, gameStarted: gameStartedProp, on
             </div>
             
             {/* right-side chat/generation area */}
-            <div className="w-3/4 flex flex-col">
+            <div className="w-full lg:w-3/4 flex flex-col">
             {!gameStarted ? (
               <div className="flex-1 flex flex-col items-center justify-center">
                 <div className="text-6xl mb-4">🎮</div>
@@ -497,7 +497,7 @@ export default function Generate({ currentTurn, gameStarted: gameStartedProp, on
                 <div className="flex-1 flex flex-col p-4">
                   {isGenerating ? (
                     <div className="flex-1 flex flex-col items-center justify-center p-4">
-                      <div className="w-[30rem] h-[30rem] bg-[#DDDDDD] rounded-[1.3rem] flex flex-col items-center justify-center">
+                      <div className="w-full max-w-[20rem] sm:max-w-[24rem] lg:max-w-[30rem] aspect-square bg-[#DDDDDD] rounded-[1.3rem] flex flex-col items-center justify-center">
                         <div className="relative mb-6">
                           <FireworkSpinner size={100} thickness={15} color="black" />
                           <i className="fa-solid fa-image absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-5xl text-gray-600" />
@@ -510,10 +510,10 @@ export default function Generate({ currentTurn, gameStarted: gameStartedProp, on
                     </div>
                   ) : hasGenerated ? (
                     <div className="flex-1 flex flex-col items-center justify-center p-4">
-                      <div className="w-[30rem] h-[30rem] rounded-[1.3rem] relative overflow-hidden shadow-lg">
+                      <div className="w-full max-w-[20rem] sm:max-w-[24rem] lg:max-w-[30rem] aspect-square rounded-[1.3rem] relative overflow-hidden shadow-lg">
                         <img
                           src={generatedImages[0]}
-                          className="w-[30rem] h-[30rem] rounded-[1.3rem] object-cover"
+                          className="w-full h-full rounded-[1.3rem] object-cover"
                           alt="Generated image"
                         />
                         <div className="absolute bottom-4 left-0 right-0 flex flex-col items-center bg-black bg-opacity-60 text-white py-2 mx-4 rounded-lg">
@@ -529,10 +529,10 @@ export default function Generate({ currentTurn, gameStarted: gameStartedProp, on
                     </div>
                   ) : (
                     <div className="flex-1 flex flex-col items-center justify-center p-4">
-                      <div className="w-[30rem] h-[30rem] bg-[#DDDDDD] rounded-[1.3rem] flex flex-col items-center justify-center relative">
+                      <div className="w-full max-w-[20rem] sm:max-w-[24rem] lg:max-w-[30rem] aspect-square bg-[#DDDDDD] rounded-[1.3rem] flex flex-col items-center justify-center relative">
                         {/* Timer in center-upper position */}
-                        <div className="absolute top-16 left-1/2 -translate-x-1/2">
-                          <div className="flex font-inter text-center bg-black text-white rounded-[0.5rem] border-black border-[0.063rem] gap-x-2 pt-2 pb-2 pl-4 pr-4 text-[1.25rem] font-semibold items-center whitespace-nowrap">
+                        <div className="absolute top-8 sm:top-16 left-1/2 -translate-x-1/2">
+                          <div className="flex font-inter text-center bg-black text-white rounded-[0.5rem] border-black border-[0.063rem] gap-x-2 pt-2 pb-2 pl-4 pr-4 text-sm sm:text-[1.25rem] font-semibold items-center whitespace-nowrap">
                             <i className="fa-regular fa-clock"></i>
                             {timeLeft < 0 ? <p>No Time Limit</p> : <p>{`${timeLeft}s left`}</p>}
                           </div>
@@ -556,7 +556,7 @@ export default function Generate({ currentTurn, gameStarted: gameStartedProp, on
                   <form onSubmit={sendMessage} className="flex p-2">
                     <input
                       type="text"
-                      className="bg-transparent w-full focus:outline-none"
+                      className="bg-transparent w-full min-w-0 focus:outline-none"
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
                       placeholder={hasGenerated ? "Image already generated" : "Enter your image prompt"}
