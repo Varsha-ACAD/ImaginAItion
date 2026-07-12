@@ -397,8 +397,8 @@ class Room:
                 "started_at": None,
                 "ended_at": None,
                 "turns": {
-                    0: {"time_limit": 70, "status": "waiting", "data": {}},  # Generate
-                    1: {"time_limit": 20, "status": "waiting", "data": {}},  # Voting
+                    0: {"time_limit": -1, "status": "waiting", "data": {}},  # Generate
+                    1: {"time_limit": -1, "status": "waiting", "data": {}},  # Voting
                     2: {"time_limit": -1, "status": "waiting", "data": {}},  # Reveal Prompt
                     3: {"time_limit": -1}  # Result
                 },

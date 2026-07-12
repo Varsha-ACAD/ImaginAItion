@@ -1,6 +1,5 @@
 import '../App.css';
 import TopBar from '../common/TopBar';
-import Timer from '../common/Timer';
 import Container from '../common/Container';
 import GameInstruction from '../common/GameInstruction';
 import PlayerContainer from '../common/Players';
@@ -27,8 +26,6 @@ export default function PlayGame() {
   const playerName = searchParams.get('player');
   const isHost = searchParams.get('host') === 'true';
   const [round, setRound] = useState(0);
-  const [hasGenerated, setHasGenerated] = useState(false);  // track whether the user has generated an image
-  const [isGenerating, setIsGenerating] = useState(false);  // track whether an image is being generated
   const [reconnecting, setReconnecting] = useState(false);  // track the reconnection state
   const [gameStarted, setGameStarted] = useState(false);  // track whether the game has actually started
   const [codeCopied, setCodeCopied] = useState(false);
@@ -42,6 +39,10 @@ export default function PlayGame() {
 
   const handleStartGame = () => {
     sio.emit('start-game', { room_id: gameCode });
+  };
+
+  const handleNextStage = () => {
+    sio.emit('force-advance', { room_id: gameCode });
   };
 
   const handleCopyGameCode = async () => {
@@ -164,11 +165,6 @@ export default function PlayGame() {
         setCurrentTurn(prevTurn => {
           if (prevTurn !== data.current_turn) {
             console.log(`✅ Updating currentTurn: ${prevTurn} -> ${data.current_turn}`);
-            // reset hasGenerated and isGenerating when entering a new generation round
-            if (data.current_turn % 4 === 0) {
-              setHasGenerated(false);
-              setIsGenerating(false);
-            }
             return data.current_turn;
           } else {
             console.log(`⚠️ Ignoring duplicate turn update: ${prevTurn}`);
@@ -283,13 +279,20 @@ export default function PlayGame() {
               <div className="relative z-[60] flex items-center gap-2 sm:gap-3 mt-4 mr-4 lg:mt-8 lg:mr-8 lg:col-start-4 lg:justify-self-end">
                 {isHost && !gameOver && currentTurn !== 24 && (
                   <button
+                    onClick={handleNextStage}
+                    className="px-2.5 py-1.5 sm:px-4 sm:py-2 bg-blue-600 text-white text-xs sm:text-base lg:text-[1.25rem] font-semibold rounded-[0.5rem] shadow hover:bg-blue-700 transition-colors whitespace-nowrap"
+                  >
+                    Next Stage
+                  </button>
+                )}
+                {isHost && !gameOver && currentTurn !== 24 && (
+                  <button
                     onClick={handleEndGame}
                     className="px-2.5 py-1.5 sm:px-4 sm:py-2 bg-red-600 text-white text-xs sm:text-base lg:text-[1.25rem] font-semibold rounded-[0.5rem] shadow hover:bg-red-700 transition-colors whitespace-nowrap"
                   >
                     End Game
                   </button>
                 )}
-                {currentTurn % 4 !== 2 && currentTurn % 4 !== 1 && !(currentTurn % 4 === 0 && !hasGenerated && !isGenerating) && <Timer />}
               </div>
             </div>
             <div className="mt-4 mx-4 lg:mt-7 lg:ml-8 lg:mr-0 grid grid-cols-1 content-between lg:h-full">
@@ -307,7 +310,7 @@ export default function PlayGame() {
                   <div className="mt-7">
                     {/* new 4-phase flow: Generate -> Voting -> Reveal -> Result */}
                     {currentTurn % 4 === 0 ? (
-                      <Generate currentTurn={currentTurn} gameStarted={gameStarted} onHasGeneratedChange={setHasGenerated} onIsGeneratingChange={setIsGenerating} />
+                      <Generate currentTurn={currentTurn} gameStarted={gameStarted} />
                     ) : currentTurn % 4 === 1 ? (
                       <Voting />
                     ) : currentTurn % 4 === 2 ? (

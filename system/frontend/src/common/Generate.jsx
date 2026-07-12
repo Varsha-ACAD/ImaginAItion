@@ -37,7 +37,6 @@ export default function Generate({ currentTurn, gameStarted: gameStartedProp, on
   const [waitingForPlayers, setWaitingForPlayers] = useState(false);
   const [confirmImage, setConfirmImage] = useState('');
   const [prompt, setPrompt] = useState('');
-  const [timeLeft, setTimeLeft] = useState(-1);
 
   // new: reference-image state
   const [referenceImage, setReferenceImage] = useState(null);
@@ -49,7 +48,6 @@ export default function Generate({ currentTurn, gameStarted: gameStartedProp, on
   // generation state
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
-  const [isAutoSubmitting, setIsAutoSubmitting] = useState(false);
   const [generatedImages, setGeneratedImages] = useState([]);
   const [tokenCount, setTokenCount] = useState(0);
   
@@ -73,93 +71,6 @@ export default function Generate({ currentTurn, gameStarted: gameStartedProp, on
     return () => clearTimeout(timeoutId);
   }, [input]);
 
-  useEffect(() => {
-    // Listen for backend updates on the timer
-    const handleTimerUpdate = (data) => {
-      console.log("⏰ Timer update received:", data.time_left, "waitingForPlayers:", waitingForPlayers);
-      setTimeLeft(data.time_left);
-    };
-
-    const handleGenerateTimerEnded = (data) => {
-      console.log("⏰ Generate timer ended:", data.message);
-      console.log("Current input value:", inputRef.current);
-      console.log("Has generated:", hasGenerated);
-      
-      // auto-submit if there is content, nothing was generated yet, and not already auto-submitting
-      if (inputRef.current.trim() && !hasGenerated && !isAutoSubmitting) {
-        console.log("🔄 Timer ended with content, auto-submitting:", inputRef.current.trim());
-        console.log("Debug - current state:", { hasGenerated, isAutoSubmitting, generatedImages: generatedImages.length });
-        handleAutoSubmit(inputRef.current.trim());
-      } else if (!hasGenerated) {
-        console.log("⚠️ Timer ended with no content, setting waiting state");
-        setWaitingForPlayers(true);
-      } else {
-        console.log("✅ Timer ended but user already generated image, no action needed");
-      }
-    };
-
-    const handleGenerationProgress = (data) => {
-      console.log("📈 Generation progress:", data.message);
-      // You could update UI to show this progress
-    };
-
-    const handleAutoSubmitSuccess = (data) => {
-      console.log("✅ Auto-submit successful:", data.message);
-      setHasGenerated(true);
-      onHasGeneratedChange?.(true);
-      setIsAutoSubmitting(false);
-      setIsGenerating(false);
-      onIsGeneratingChange?.(false);
-      console.log("✅ Auto-submit successful, hasGenerated set to true");
-      
-      // show the auto-generated image
-      if (data.image_url) {
-        setGeneratedImages([data.image_url]);
-        setImage(data.image_url);
-      }
-      if (data.prompt) {
-        setPrompt(data.prompt);
-      }
-      // no need to set waitingForPlayers; the status bar under the image already shows the waiting state
-    };
-
-    const handleAutoSubmitFailed = (data) => {
-      console.error("❌ Auto-submit failed:", data.error);
-      setIsGenerating(false);
-      onIsGeneratingChange?.(false);
-      setIsAutoSubmitting(false);
-
-      // if it failed because an image was already submitted, do not show the waiting modal
-      if (data.error === "Image already submitted") {
-        console.log("✅ Image already submitted, no need to show waiting modal");
-        // make sure the hasGenerated state is correct
-        setHasGenerated(true);
-        onHasGeneratedChange?.(true);
-      }
-      // Check if it's an API key error
-      else if (data.error && data.error.includes('API key')) {
-        alert('Invalid OpenAI API key. Please check your API key and try again.');
-      }
-      else {
-        setWaitingForPlayers(true);
-      }
-    };
-
-    socket.on('update_timer', handleTimerUpdate);
-    socket.on('generate_timer_ended', handleGenerateTimerEnded);
-    socket.on('generation_progress', handleGenerationProgress);
-    socket.on('auto_submit_success', handleAutoSubmitSuccess);
-    socket.on('auto_submit_failed', handleAutoSubmitFailed);
-
-    return () => {
-      socket.off('update_timer', handleTimerUpdate);
-      socket.off('generate_timer_ended', handleGenerateTimerEnded);
-      socket.off('generation_progress', handleGenerationProgress);
-      socket.off('auto_submit_success', handleAutoSubmitSuccess);
-      socket.off('auto_submit_failed', handleAutoSubmitFailed);
-    };
-  }, [waitingForPlayers]);
-
   // Game start is now managed by parent PlayGame component via props
 
   // reset the waiting state when the round changes
@@ -175,15 +86,12 @@ export default function Generate({ currentTurn, gameStarted: gameStartedProp, on
       setWaitingForPlayers(false);
       setHasGenerated(false);
       onHasGeneratedChange?.(false);
-      setIsAutoSubmitting(false);
       setIsGenerating(false);
       onIsGeneratingChange?.(false);
       setInput('');
       setPrompt('');
       setGeneratedImages([]);
       setShowModerationError(false);
-      // reset timeLeft to its initial value and wait for the backend's real timer update
-      setTimeLeft(-1);
     }
   }, [currentTurn, gameStarted]);
 
@@ -295,55 +203,6 @@ export default function Generate({ currentTurn, gameStarted: gameStartedProp, on
     await handlePlayerDone();
     await socket.emit('get-player-state');
   };
-
-  const handleAutoSubmit = async (promptText) => {
-    if (isAutoSubmitting || hasGenerated) {
-      console.log("⚠️ Auto-submit already in progress or already generated, skipping");
-      console.log("Current state - isAutoSubmitting:", isAutoSubmitting, "hasGenerated:", hasGenerated);
-      return;
-    }
-    
-    console.log("🔄 Starting auto-submit process for prompt:", promptText);
-    console.log("Current state before auto-submit - hasGenerated:", hasGenerated, "isAutoSubmitting:", isAutoSubmitting);
-    setIsAutoSubmitting(true);
-    setIsGenerating(true);
-    onIsGeneratingChange?.(true);
-    setPrompt(promptText);
-    
-    try {
-      // Send auto-submit request to backend
-      sio.emit('auto-submit-prompt', {
-        room_id: gameCode,
-        prompt: promptText
-      });
-      
-      // no need to set waitingForPlayers immediately; a status bar shows once image generation completes
-    } catch (error) {
-      console.error('Error in auto-submit:', error);
-      setIsGenerating(false);
-      onIsGeneratingChange?.(false);
-      setIsAutoSubmitting(false);
-    }
-  };
-
-  useEffect(() => {
-    console.log("⏱️ timeLeft changed to:", timeLeft, "waitingForPlayers:", waitingForPlayers);
-    if (timeLeft === 0 && !hasGenerated) {
-      console.log("⚠️ Timer reached 0, checking for auto-submit");
-      
-      // If user has content in input, auto-submit it
-      if (inputRef.current.trim() && !isAutoSubmitting) {
-        console.log("🔄 Auto-submitting prompt:", inputRef.current.trim());
-        console.log("Debug - current state:", { hasGenerated, isAutoSubmitting, generatedImages: generatedImages.length });
-        handleAutoSubmit(inputRef.current.trim());
-      } else if (!hasGenerated) {
-        console.log("⚠️ No prompt to auto-submit, setting waiting state");
-        setWaitingForPlayers(true);
-      } else {
-        console.log("✅ Timer reached 0 but user already generated image, no action needed");
-      }
-    }
-  }, [timeLeft, hasGenerated]);
 
   return (
     <>
@@ -530,14 +389,6 @@ export default function Generate({ currentTurn, gameStarted: gameStartedProp, on
                   ) : (
                     <div className="flex-1 flex flex-col items-center justify-center p-4">
                       <div className="w-full max-w-[20rem] sm:max-w-[24rem] lg:max-w-[30rem] aspect-square bg-[#DDDDDD] rounded-[1.3rem] flex flex-col items-center justify-center relative">
-                        {/* Timer in center-upper position */}
-                        <div className="absolute top-8 sm:top-16 left-1/2 -translate-x-1/2">
-                          <div className="flex font-inter text-center bg-black text-white rounded-[0.5rem] border-black border-[0.063rem] gap-x-2 pt-2 pb-2 pl-4 pr-4 text-sm sm:text-[1.25rem] font-semibold items-center whitespace-nowrap">
-                            <i className="fa-regular fa-clock"></i>
-                            {timeLeft < 0 ? <p>No Time Limit</p> : <p>{`${timeLeft}s left`}</p>}
-                          </div>
-                        </div>
-                        
                         {/* Placeholder content */}
                         <div className="flex flex-col items-center text-center mt-8">
                           <i className="fa-solid fa-image text-6xl text-gray-500 mb-4"></i>

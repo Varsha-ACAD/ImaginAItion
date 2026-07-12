@@ -10,9 +10,7 @@ export default function Voting() {
   const { gameCode } = useParams();
   const location = useLocation();
   const isHost = new URLSearchParams(location.search).get('host') === 'true';
-  const [timeLeft, setTimeLeft] = useState(-1);
-  const [showVoteReminder, setShowVoteReminder] = useState(false);
-  
+
   // reference-image state
   const [referenceImage, setReferenceImage] = useState(null);
   const [isLoadingReference, setIsLoadingReference] = useState(true);
@@ -22,32 +20,6 @@ export default function Voting() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [hasVoted, setHasVoted] = useState(false);
   const [isLoadingImages, setIsLoadingImages] = useState(true);
-
-  // listen for timer updates
-  useEffect(() => {
-    const handleTimerUpdate = (data) => {
-      setTimeLeft(data.time_left);
-      
-      // show a reminder when the timer hits 0 and the user has not voted
-      if (data.time_left === 0 && !hasVoted) {
-        setShowVoteReminder(true);
-      }
-    };
-
-    const handleVoteReminderShow = () => {
-      if (!hasVoted) {
-        setShowVoteReminder(true);
-      }
-    };
-
-    sio.on('update_timer', handleTimerUpdate);
-    sio.on('show_vote_reminder', handleVoteReminderShow);
-
-    return () => {
-      sio.off('update_timer', handleTimerUpdate);
-      sio.off('show_vote_reminder', handleVoteReminderShow);
-    };
-  }, [hasVoted]);
 
   // get the reference image
   useEffect(() => {
@@ -108,8 +80,7 @@ export default function Voting() {
       });
       
       setHasVoted(true);
-      setShowVoteReminder(false); // hide the vote reminder
-      
+
       // the backend auto-checks in the vote API whether all players have voted and advances the game
       
     } catch (error) {
@@ -126,35 +97,6 @@ export default function Voting() {
 
   return (
     <>
-      
-      {/* vote-reminder popup */}
-      {showVoteReminder && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-          onClick={() => setShowVoteReminder(false)}
-        >
-          <div 
-            className="bg-white p-8 rounded-3xl shadow-2xl border-2 border-red-300 max-w-md mx-4 text-center animate-pulse"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="text-6xl mb-4">⏰</div>
-            <h3 className="text-2xl font-inter font-bold text-red-600 mb-3">
-              Time's Up!
-            </h3>
-            <p className="text-lg text-gray-700 mb-6">
-              Please click on an image to vote before the game can continue.
-            </p>
-            <div className="flex items-center justify-center text-red-500 font-medium mb-4">
-              <i className="fa-solid fa-hand-pointer mr-2"></i>
-              Click an image above to vote
-            </div>
-            <div className="text-sm text-gray-500">
-              Click anywhere to close this reminder
-            </div>
-          </div>
-        </div>
-      )}
-      
       <div className="flex flex-col items-center mb-6">
         <h2 className="text-[2rem] font-inter font-semibold">
           ✨ Vote on the best image
@@ -213,14 +155,6 @@ export default function Voting() {
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center">
-              {/* the timer is shown above and between the two images */}
-              <div className="mb-8">
-                <div className="flex font-inter text-center bg-black text-white rounded-[0.5rem] border-black border-[0.063rem] gap-x-2 pt-2 pb-2 pl-4 pr-4 text-[1.25rem] font-semibold items-center whitespace-nowrap">
-                  <i className="fa-regular fa-clock"></i>
-                  {timeLeft < 0 ? <p>No Time Limit</p> : <p>{`${timeLeft}s left`}</p>}
-                </div>
-              </div>
-              
               <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 justify-center items-center">
                 {otherPlayersImages.map((imageData, index) => (
                   <div
