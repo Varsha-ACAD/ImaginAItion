@@ -96,10 +96,6 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 # via `python main.py` or `uvicorn main:app --port $BACKEND_PORT`
 BACKEND_PORT = int(os.getenv("BACKEND_PORT", 5004))
 
-# Get backend URL from environment variable, fallback to localhost for development
-BACKEND_URL = os.getenv("BACKEND_URL", f"http://localhost:{BACKEND_PORT}")
-
-
 def resolve_room_api_key(room):
     """Return the OpenAI API key for a room.
     Always prefers the room-specific key the player supplied. 

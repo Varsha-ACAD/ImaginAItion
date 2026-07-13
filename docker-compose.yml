@@ -1,0 +1,21 @@
+services:
+  backend:
+    build: ./system/backend
+    ports:
+      - "5004:5004"
+    env_file:
+      - ./system/.env
+    volumes:
+      - ./system/backend:/app
+
+  frontend:
+    build: ./system/frontend
+    ports:
+      - "5173:5173"
+    env_file:
+      - ./system/.env
+    volumes:
+      - ./system/frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
