@@ -1,22 +1,17 @@
 // API Configuration for different environments
 
 const getApiBaseUrl = () => {
-  // Check if VITE_API_URL is set and not empty
+  // Explicit URL always wins, in any mode
   if (import.meta.env.VITE_API_URL && import.meta.env.VITE_API_URL.trim() !== '') {
     return import.meta.env.VITE_API_URL;
   }
 
-  // In production (when VITE_ENVIRONMENT is set to 'production' or VITE_API_URL is empty)
-  if (import.meta.env.VITE_ENVIRONMENT === 'production' || import.meta.env.VITE_API_URL === '') {
-    return ''; // Use relative paths
-  }
-
-  // Development mode - use localhost
+  // Dev server with no explicit URL configured - assume local backend
   if (import.meta.env.DEV) {
     return 'http://localhost:5004';
   }
 
-  // Fallback to empty string for relative paths
+  // Production build with no explicit URL - use relative paths (current origin)
   return '';
 };
 

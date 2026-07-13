@@ -2,20 +2,20 @@ import { io } from 'socket.io-client';
 
 // In production, use current origin without explicit URL
 const getSocketUrl = () => {
-  // Check if VITE_API_URL is set and not empty
+  // Explicit URL always wins, in any mode
   if (import.meta.env.VITE_API_URL && import.meta.env.VITE_API_URL.trim() !== '') {
     return import.meta.env.VITE_API_URL;
   }
 
-  // In production (when VITE_ENVIRONMENT is set to 'production' or VITE_API_URL is empty)
-  if (import.meta.env.VITE_ENVIRONMENT === 'production' || import.meta.env.VITE_API_URL === '') {
-    // Don't pass any URL - Socket.IO will use current page origin
-    console.log('Using current origin for Socket.IO connection');
-    return undefined;
+  // Dev server with no explicit URL configured - assume local backend
+  if (import.meta.env.DEV) {
+    return 'http://localhost:5004';
   }
 
-  // In development, use localhost
-  return 'http://localhost:5004';
+  // Production build with no explicit URL - use current page origin
+  // rather than risk a stale/wrong default (e.g. a dev-only localhost URL).
+  console.log('Using current origin for Socket.IO connection');
+  return undefined;
 };
 
 const socketUrl = getSocketUrl();
