@@ -912,6 +912,9 @@ async def create_game_room(request: RoomRequestCreate):
 @router.post("/api/join-room")
 async def get_room(request: RoomRequest):
     room = room_manager.get_room(request.room_id)
+    print(f"🔍 join-room requested room_id={request.room_id!r}; known rooms={list(room_manager.rooms.keys())}")
+    if room:
+        print(f"🔍 join-room found room.__dict__={room.__dict__}")
     if room and (room.max_players is None or len(room.players) < room.max_players):
         room.add_player(request.sid, request.player_name)
         sid_to_room[request.sid] = request.room_id
@@ -927,6 +930,7 @@ async def get_room(request: RoomRequest):
         # Create session token for reconnection support
         session_token = create_player_session(request.room_id, request.player_name, request.sid)
 
+        
         return {"room": room.__dict__, "session_token": session_token}
     return {"message": "Room not found"}
 
