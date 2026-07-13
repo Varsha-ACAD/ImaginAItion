@@ -36,7 +36,7 @@ export default function Waiting({ message = "Waiting for other players...", show
   }, []);
 
   useEffect(() => {
-    socket.emit('get-player-state', { room_id: gameCode });
+    socket.emit('get-player-state');
     const handlePlayerScores = (data) => {
       if (!data.player_state || !data.player_state[socket.id]) {
         console.warn('⚠️ player_state not available or current player not found:', data.player_state);

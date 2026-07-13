@@ -160,7 +160,7 @@ export default function Generate({ currentTurn, gameStarted: gameStartedProp, on
       // auto-confirm
       await handleSendImage(firstImage, input.trim());
       await handlePlayerDone();
-      await socket.emit('get-player-state', { room_id: gameCode });
+      await socket.emit('get-player-state');
       // no need to set waitingForPlayers; the status bar under the image already shows the waiting state
     } catch (error) {
       console.error('Error generating images:', error);
