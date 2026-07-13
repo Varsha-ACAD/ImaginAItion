@@ -3480,8 +3480,8 @@ async def debug_game_state(room_id: str):
 
 
 @sio.on("get-player-state")
-async def get_player_state(sid):
-    room_id = sid_to_room.get(sid)
+async def get_player_state(sid, data=None):
+    room_id = (data or {}).get("room_id") or sid_to_room.get(sid)
     if not room_id:
         await sio.emit("error", {"message": "Player not in any room"}, room=sid)
         return

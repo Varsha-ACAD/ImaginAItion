@@ -110,8 +110,8 @@ export default function PlayerContainer() {
     socket.emit('get-players', { room_id: gameCode });
   }, [gameCode]);
   useEffect(() => {
-    socket.emit('get-player-state');
-  }, []);
+    socket.emit('get-player-state', { room_id: gameCode });
+  }, [gameCode]);
 
   return (
     <div className="bg-white rounded-[1rem] border-black border-[0.063rem]">
